@@ -75,6 +75,11 @@ void generate_print_newline(){
 
 void generate_print_functs(){
     fprintf(fptr,"%s\n","_print_number:");
+    fprintf(fptr,"%s\n","    mov rbx,rax");
+    fprintf(fptr,"%s\n","    push rbx");
+    fprintf(fptr,"%s\n","    test rax,rax");
+    fprintf(fptr,"%s\n","    js _is_negative");
+    fprintf(fptr,"%s\n","    _jmp_back:");
     fprintf(fptr,"%s\n","    mov rcx,digit");
     fprintf(fptr,"%s\n","    mov rbx,10");
     fprintf(fptr,"%s\n","    mov [rcx],rbx");
@@ -105,10 +110,27 @@ void generate_print_functs(){
     fprintf(fptr,"%s\n","    mov [digitPos],rcx");
     fprintf(fptr,"%s\n","    cmp rcx,digit");
     fprintf(fptr,"%s\n","    jge _print_number_loop");
+    fprintf(fptr,"%s\n","    pop rbx");
+    fprintf(fptr,"%s\n","    mov rax,rbx");
     fprintf(fptr,"%s\n","    ret");
+    fprintf(fptr,"%s\n","_is_negative:");
+    fprintf(fptr,"%s\n","    push rax");
+    fprintf(fptr,"%s\n","    mov rcx, [digitPos]");
+    fprintf(fptr,"%s\n","    mov rax, 1");          
+    fprintf(fptr,"%s\n", "    mov rdi, 1");
+    fprintf(fptr,"%s\n", "    mov rsi, minus_sign");
+    fprintf(fptr,"%s\n", "    mov rdx, 1");
+    fprintf(fptr,"%s\n", "    syscall");
+    fprintf(fptr,"%s\n","    pop rax");
+    fprintf(fptr,"%s\n","    neg rax");
+    fprintf(fptr,"%s\n","    jmp _jmp_back");
 }
 
+
+
 void generate_header(){
+    fprintf(fptr,"%s\n","section .data");
+    fprintf(fptr,"%s\n", "minus_sign db '-'");
     fprintf(fptr,"%s\n","section .bss");
     fprintf(fptr,"%s\n","    digit resb 100");
     fprintf(fptr,"%s\n","    digitPos resb 8");
@@ -117,9 +139,8 @@ void generate_header(){
     fprintf(fptr,"%s\n","_start:","","","");
     fprintf(fptr,"    %s\n","push rbp");
     fprintf(fptr,"    %s\n","mov rbp,rsp");
-
-
 }
+
 
 void assign(expr_rec target,expr_rec source){
     char *result = (char *)malloc(100);
@@ -249,7 +270,7 @@ expr_rec gen_infix(expr_rec e1,op_rec op, expr_rec e2){
          generate("mov rax,",number,"","");
          if(op.operator==PLUS){
             generate("add","rax",e2_direction,"");
-        }else {
+        }else{
             generate("sub","rax",e2_direction,"");
         }
         generate("mov",destination,"rax","");
@@ -265,7 +286,8 @@ expr_rec gen_infix(expr_rec e1,op_rec op, expr_rec e2){
          if(op.operator==PLUS){
             generate("add","rax",e1_direction,"");
         }else{
-             generate("sub","rax",e1_direction,"");
+             generate("sub",e1_direction,"rax","");
+             generate("mov","rax",e1_direction,"");
         }
         generate("mov",destination,"rax","");
         return e_rec;
@@ -290,6 +312,7 @@ expr_rec gen_infix(expr_rec e1,op_rec op, expr_rec e2){
    generate("mov",destination,"rax","");
    return e_rec;
 }
+
 
 expr_rec gen_infix_if(expr_rec e1,op_rec op, expr_rec e2){
     expr_rec e_rec;
