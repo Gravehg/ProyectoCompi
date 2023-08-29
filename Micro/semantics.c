@@ -7,6 +7,8 @@ FILE *fptrTemp;
 struct variable_pointer symbol_table[1000];
 int symbol_table_index = 0;
 int rbp = 0;
+int label_number = 0;
+int return_number = 0;
 
 //Semantic processing procs
 void start(void){
@@ -73,11 +75,6 @@ void generate_print_newline(){
 
 void generate_print_functs(){
     fprintf(fptr,"%s\n","_print_number:");
-    fprintf(fptr,"%s\n","    mov rbx,rax");
-    fprintf(fptr,"%s\n","    push rbx");
-    fprintf(fptr,"%s\n","    test rax,rax");
-    fprintf(fptr,"%s\n","    js _is_negative");
-    fprintf(fptr,"%s\n","    _jmp_back:");
     fprintf(fptr,"%s\n","    mov rcx,digit");
     fprintf(fptr,"%s\n","    mov rbx,10");
     fprintf(fptr,"%s\n","    mov [rcx],rbx");
@@ -108,25 +105,10 @@ void generate_print_functs(){
     fprintf(fptr,"%s\n","    mov [digitPos],rcx");
     fprintf(fptr,"%s\n","    cmp rcx,digit");
     fprintf(fptr,"%s\n","    jge _print_number_loop");
-    fprintf(fptr,"%s\n","    pop rbx");
-    fprintf(fptr,"%s\n","    mov rax,rbx");
     fprintf(fptr,"%s\n","    ret");
-    fprintf(fptr,"%s\n","_is_negative:");
-    fprintf(fptr,"%s\n","    push rax");
-    fprintf(fptr,"%s\n","    mov rcx, [digitPos]");
-    fprintf(fptr,"%s\n","    mov rax, 1");          
-    fprintf(fptr,"%s\n", "    mov rdi, 1");
-    fprintf(fptr,"%s\n", "    mov rsi, minus_sign");
-    fprintf(fptr,"%s\n", "    mov rdx, 1");
-    fprintf(fptr,"%s\n", "    syscall");
-    fprintf(fptr,"%s\n","    pop rax");
-    fprintf(fptr,"%s\n","    neg rax");
-    fprintf(fptr,"%s\n","    jmp _jmp_back");
 }
 
 void generate_header(){
-    fprintf(fptr,"%s\n","section .data");
-    fprintf(fptr,"%s\n", "minus_sign db '-'");
     fprintf(fptr,"%s\n","section .bss");
     fprintf(fptr,"%s\n","    digit resb 100");
     fprintf(fptr,"%s\n","    digitPos resb 8");
@@ -148,6 +130,7 @@ void assign(expr_rec target,expr_rec source){
         generate("mov",destination,"rax","");
     }else{
         result = extract(source);
+        //printf("result is: %s",&result);
         generate("mov qword",destination,result,"");
     }
 }
@@ -166,6 +149,7 @@ void assign_if(expr_rec target,expr_rec source){
 }
 
 char* search_in_table(expr_rec target){
+    //printf("target name is: %s\n",target.name);
     char *result = (char *)malloc(100);
     strcpy(result, "[rbp+");
     char pointer_pos[100];
@@ -177,6 +161,7 @@ char* search_in_table(expr_rec target){
         }
     }
     strcat(result,pointer_pos);
+    //printf("the result is %s\n",result);
     return result;
 }
 
@@ -184,8 +169,10 @@ op_rec process_op(void){
     op_rec o;
     if(current_token == PLUSOP)
         o.operator = PLUS;
-    else
+    else if(current_token == MINUSOP)
         o.operator = MINUS;
+    else 
+        o.operator = DESITION;
     return o;
 }
 
@@ -212,6 +199,16 @@ void initialize_symbol_table(){
     }
 }
 
+expr_rec separateDesition(expr_rec e1, expr_rec e2, expr_rec e3){
+    expr_rec e_rec;
+    e_rec.kind = TEMPEXPR;
+
+    generate_if(e1);
+    if(e1.val==0)
+        return e2;
+    else
+        return e3;
+}
 
 expr_rec gen_infix(expr_rec e1,op_rec op, expr_rec e2){
     expr_rec e_rec;
@@ -252,7 +249,7 @@ expr_rec gen_infix(expr_rec e1,op_rec op, expr_rec e2){
          generate("mov rax,",number,"","");
          if(op.operator==PLUS){
             generate("add","rax",e2_direction,"");
-        }else{
+        }else {
             generate("sub","rax",e2_direction,"");
         }
         generate("mov",destination,"rax","");
@@ -268,8 +265,7 @@ expr_rec gen_infix(expr_rec e1,op_rec op, expr_rec e2){
          if(op.operator==PLUS){
             generate("add","rax",e1_direction,"");
         }else{
-             generate("sub",e1_direction,"rax","");
-             generate("mov","rax",e1_direction,"");
+             generate("sub","rax",e1_direction,"");
         }
         generate("mov",destination,"rax","");
         return e_rec;
@@ -318,7 +314,7 @@ expr_rec gen_infix_if(expr_rec e1,op_rec op, expr_rec e2){
             char* sumChar[100];
             sprintf(sumChar,"%i",sum);
             generateIf("mov qword",destination,sumChar,"");
-        }else{
+        }else if(op.operator==MINUS){
             int diff = e1.val-e2.val;
             char* sumChar[100];
             sprintf(sumChar,"%i",diff);
@@ -403,7 +399,6 @@ void read_id(expr_rec in_var){
     fprintf(fptr,"%s\n","    call _generate_number");
     fprintf(fptr,"%s%s%s\n","    mov ",to_read,",rax");
     fprintf(fptr,"%s\n","    call _print_newline");
-
 }
 
 void read_id_if(expr_rec in_var){
@@ -486,6 +481,7 @@ void generate_tag(int tag_number){
 }
 
 void generate_if(expr_rec out_expr){
+    //printf("el valor es: %d\n",out_expr.val);
     if(out_expr.kind == LITERALEXPR){
         fprintf(fptr,"    mov rax, %d\n ", out_expr.val); 
         fprintf(fptr,"   cmp rax,0\n");
@@ -504,6 +500,7 @@ void generate_jump(char*jump,int labelNumber){
     sprintf(tag,"%i",labelNumber);
     strcat(jump,tag);
     fprintf(fptr,"    %s\n",jump);
+    printf("result is: %s", result);
 }
 
 void generateEOIJmp(int return_number){
@@ -522,6 +519,7 @@ void generateEOI(int return_number){
     char* tag[100];
     sprintf(tag,"%i",return_number);
     strcat(result,tag);
+    //printf("result is: %s", result);
     fprintf(fptrTemp,"    jmp %s\n",result);
 }
 

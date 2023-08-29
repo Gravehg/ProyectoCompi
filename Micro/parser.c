@@ -8,9 +8,6 @@
 
 token current_token;
 
-int label_number = 0;
-int return_number = 0;
-
 void system_goal(void){
    /*<system goal> :: = <program> SCANEOF*/
    program();
@@ -49,7 +46,6 @@ void statement_list(void){
         {
         case ID:
         case READ:
-        case IF:
         case WRITE:
             statement();
             break;
@@ -104,33 +100,6 @@ void statement(void){
             match(SEMICOLON);
             break;
         
-        case IF:
-            match(IF);
-            match(LPAREN);
-            expr_rec ifexpr;
-            expression(&ifexpr);
-            generate_if(ifexpr);
-            match(THEN);
-            generate_tag(label_number);
-            char * label = (char *)malloc(100);
-            strcpy(label,"jne");
-            generate_jump(label,label_number);
-            label_number++;
-            statement_list_if();
-            generateEOI(return_number);
-            match(ELSE);
-            char * labelNe = (char *)malloc(100);
-            strcpy(labelNe,"je");
-            generate_jump(labelNe,label_number);
-            generate_tag(label_number);
-            label_number++;
-            statement_list_if();
-            generateEOI(return_number);
-            match(RPAREN);
-            match(SEMICOLON);
-            generateEOIJmp(return_number);
-            return_number++;
-            break;
         case END:
             break;
         default:
@@ -189,8 +158,26 @@ void expression_if(expr_rec *result){
 
 void expression(expr_rec *result){
     expr_rec left_operand, right_operand;
+    expr_rec first_operand, second_operand;
     op_rec op;
-    primary(&left_operand);
+    int i = 0;
+
+    if(current_token!=CONDITIONAL){
+        primary(&left_operand);
+    }
+    while (current_token==CONDITIONAL){
+        add_op(& op);
+        primary(& right_operand);
+        if(i==0){
+            first_operand = left_operand;
+            second_operand = right_operand;
+        }else if(i==1){
+            left_operand = separateDesition(first_operand,second_operand,right_operand);
+        }else{
+            syntax_error(current_token);
+        }
+        i++;
+    }
     while(current_token==PLUSOP||current_token==MINUSOP){
         add_op(& op);
         primary(& right_operand);
@@ -201,7 +188,7 @@ void expression(expr_rec *result){
 
 void add_op(op_rec *result){
     *result = process_op();
-    if(current_token == PLUSOP || current_token == MINUSOP){
+    if(current_token == PLUSOP || current_token == MINUSOP || current_token == CONDITIONAL){
         match(current_token);
     }else
         syntax_error(current_token);
@@ -215,6 +202,10 @@ void primary(expr_rec *result){
         case LPAREN:
             match(LPAREN);
             expression(& expr);
+            if(current_token == CONDITIONAL){
+                expr_rec cond_expr;
+                expression(& cond_expr);
+            } 
             match(RPAREN);
             break;
 
@@ -225,8 +216,7 @@ void primary(expr_rec *result){
 
         case INTLITERAL:
             match(INTLITERAL);
-            expr = 
-            process_literal();
+            expr = process_literal();
             break;
 
         default:
@@ -359,15 +349,9 @@ void syntax_error(token tok){
             result = "MINUSOP";
             break;
         case 13:
-            result = "IF";
+            result = "CONDITIONAL";
             break;
         case 14:
-            result = "THEN";
-            break;
-        case 15:
-            result = "ELSE";
-            break;
-        case 16:
             result = "SCANEOF";
             break;
         default:
@@ -428,18 +412,10 @@ void syntax_error(token tok){
             printf("Last read lexeme is: %s\n",token_buffer);
             break;
         case 13:
-            printf("Error, expected IF {if}, got: %s\n",result);
+            printf("Error, expected CONDITIONAL {|}, got: %s\n",result);
             printf("Last read lexeme is: %s\n",token_buffer);
             break;
         case 14:
-            printf("Error, expected THEN {then}, got: %s\n",result);
-            printf("Last read lexeme is: %s\n",token_buffer);
-            break;
-        case 15:
-            printf("Error, expected ELSE {else}, got: %s\n",result);
-            printf("Last read lexeme is: %s\n",token_buffer);
-            break;
-        case 16:
             printf("Error, expected SCANEOF , got: %s\n",result);
             printf("Last read lexeme is: %s\n",token_buffer);
             break;

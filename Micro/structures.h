@@ -10,7 +10,7 @@ typedef enum token_types {
 typedef char string[MAXIDLEN];
 
 typedef struct operator {
-    enum op { PLUS, MINUS,DESITION} operator;
+    enum op { PLUS, MINUS, DESITION} operator;
 } op_rec;
 
 typedef struct variable_pointer{

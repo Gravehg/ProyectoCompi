@@ -51,16 +51,12 @@ token check_reserved(){
     char wordEnd[] = "end";
     char wordRead[] = "read";
     char wordWrite[] = "write";
-    char wordIf[] = "if";
     char wordThen[] = "then";
     char wordElse[] = "else";
     if(strcmp(wordBegin,token_buffer)==0) return BEGIN;
     if(strcmp(wordEnd,token_buffer)==0) return END;
     if(strcmp(wordRead,token_buffer)==0) return READ;
     if(strcmp(wordWrite,token_buffer)==0) return WRITE;
-    if(strcmp(wordIf,token_buffer)==0)return IF;
-    if(strcmp(wordThen,token_buffer)==0)return THEN;
-    if(strcmp(wordElse,token_buffer)==0)return ELSE;
     else return ID; 
 }
 
